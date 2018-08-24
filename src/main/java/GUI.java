@@ -145,6 +145,7 @@ public class GUI extends JFrame {
 
         //distribution panel
         JPanel distributionPanl = new JPanel(new GridBagLayout());
+        distributionPanl.setBorder(BorderFactory.createTitledBorder("distribution"));
         gbc.gridx = 0; gbc.gridy = 6; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(distributionPanl, gbc);
         flatRadio = new JRadioButton("flat");
@@ -189,7 +190,13 @@ public class GUI extends JFrame {
                     startOrders();
                 } catch (Exception e1) {
                     e1.printStackTrace();
-                    setTitle(e1.getMessage());
+                    if (e1.getMessage().contains("MIN_NOTIONAL")) {
+                        setTitle("Error: single order size too small");
+                    } else if (e1.getMessage().contains("invalid price")) {
+                        setTitle("Error: invalid price");
+                    } else {
+                        setTitle(e1.getMessage());
+                    }
                 }
             }
         });
