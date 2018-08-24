@@ -1,12 +1,9 @@
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -14,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class GUI extends JFrame {
@@ -42,7 +38,6 @@ public class GUI extends JFrame {
 
         addAccountButton();
 
-
     }
 
     private JComboBox<String> pairPicker;
@@ -64,8 +59,7 @@ public class GUI extends JFrame {
 
     private static JButton startButton;
 
-
-
+    
     private void startMainScalePanel(String accountName) throws IOException {
 
         //connected, set title

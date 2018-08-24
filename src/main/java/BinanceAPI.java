@@ -3,23 +3,17 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.dto.marketdata.BinancePriceQuantity;
-import org.knowm.xchange.binance.dto.trade.OrderSide;
-import org.knowm.xchange.binance.dto.trade.OrderType;
-import org.knowm.xchange.binance.dto.trade.TimeInForce;
 import org.knowm.xchange.binance.service.BinanceAccountServiceRaw;
 import org.knowm.xchange.binance.service.BinanceMarketDataServiceRaw;
 import org.knowm.xchange.binance.service.BinanceTradeServiceRaw;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.trade.TradeService;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,7 +34,7 @@ public class BinanceAPI {
     private static AccountService accountService;
     private static BinanceAccountServiceRaw accountServiceRaw;
 
-    public static void connect(String k, String s) throws IOException {
+    public static void connect(String k, String s) {
 
         ExchangeSpecification exSpec = new ExchangeSpecification(BinanceExchange.class);
         exSpec.setApiKey(k);
@@ -64,19 +58,13 @@ public class BinanceAPI {
 
         String acctStatus = "connectionSuccess";
 
-
         try {
             acctInfo = accountService.getAccountInfo();
-
-
         } catch (Exception e) {
             acctStatus = e.getMessage();
         }
 
-
         return acctStatus;
-
-
     }
 
     public static String placeOrder(Trade t, int roundscale) throws IOException {
@@ -108,9 +96,6 @@ public class BinanceAPI {
             return new CurrencyPair(new Currency(c1), Currency.USDT);
         }
 
-
-
-
     }
 
     public static ArrayList<String> getPairs() throws IOException {
@@ -124,7 +109,6 @@ public class BinanceAPI {
         }
 
         Collections.sort(pairs);
-
 
         return pairs;
 
