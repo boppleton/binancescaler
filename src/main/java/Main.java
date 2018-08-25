@@ -6,9 +6,10 @@ public class Main {
 
     private static GUI gui = null;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         startGUI();
+
 
     }
 

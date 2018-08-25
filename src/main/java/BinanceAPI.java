@@ -10,6 +10,11 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.RateLimit;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.marketdata.MarketDataService;
@@ -67,11 +72,11 @@ public class BinanceAPI {
         return acctStatus;
     }
 
-    public static String placeOrder(Trade t, int roundscale) throws IOException {
+    public static String placeOrder(SingleTrade t, int roundscale, int amtscale) throws IOException {
 
         System.out.println("placing limit " + t.pair + " " + t.side.toString() + " " + t.amt + " at " + new BigDecimal(t.price).setScale(roundscale, RoundingMode.HALF_EVEN));
 
-        LimitOrder order = new LimitOrder( t.side, new BigDecimal(t.amt).setScale(2, RoundingMode.HALF_DOWN), getPair(t.pair), "", null, new BigDecimal(t.price).setScale(roundscale, RoundingMode.HALF_EVEN) );
+        LimitOrder order = new LimitOrder( t.side, new BigDecimal(t.amt).setScale(amtscale, RoundingMode.HALF_DOWN), getPair(t.pair), "", null, new BigDecimal(t.price).setScale(roundscale, RoundingMode.HALF_EVEN) );
 
         String id = tradeService.placeLimitOrder(order);
 
@@ -82,18 +87,24 @@ public class BinanceAPI {
 
     private static CurrencyPair getPair(String pair) {
 
-        if (pair.contains("BTC")) {
-            String c1 = pair.substring(0, pair.indexOf("BTC"));
-            return new CurrencyPair(new Currency(c1), Currency.BTC);
-        } else if (pair.contains("ETH")) {
-            String c1 = pair.substring(0, pair.indexOf("ETH"));
-            return new CurrencyPair(new Currency(c1), Currency.ETH);
-        } else if (pair.contains("BNB")) {
-            String c1 = pair.substring(0, pair.indexOf("BNB"));
-            return new CurrencyPair(new Currency(c1), Currency.BNB);
-        }else {
-            String c1 = pair.substring(0, pair.indexOf("USDT"));
-            return new CurrencyPair(new Currency(c1), Currency.USDT);
+        if (pair.contains("BTCUSD")) {
+            return CurrencyPair.BTC_USDT;
+        } else {
+
+            if (pair.contains("BTC")) {
+                String c1 = pair.substring(0, pair.indexOf("BTC"));
+                return new CurrencyPair(new Currency(c1), Currency.BTC);
+            } else if (pair.contains("ETH")) {
+                String c1 = pair.substring(0, pair.indexOf("ETH"));
+                return new CurrencyPair(new Currency(c1), Currency.ETH);
+            } else if (pair.contains("BNB")) {
+                String c1 = pair.substring(0, pair.indexOf("BNB"));
+                return new CurrencyPair(new Currency(c1), Currency.BNB);
+            } else {
+                String c1 = pair.substring(0, pair.indexOf("USDT"));
+                return new CurrencyPair(new Currency(c1), Currency.USDT);
+            }
+
         }
 
     }
@@ -105,7 +116,7 @@ public class BinanceAPI {
         ArrayList<String> pairs = new ArrayList<>();
 
         for (BinancePriceQuantity p : tickers) {
-            pairs.add(p.symbol);
+                pairs.add(p.symbol);
         }
 
         Collections.sort(pairs);
@@ -114,7 +125,7 @@ public class BinanceAPI {
 
     }
 
-    public static int getRoundscale(Trade trade) throws IOException {
+    public static int getRoundscale(SingleTrade trade) throws IOException {
 
         CurrencyPair p = getPair(trade.pair);
 
@@ -155,6 +166,74 @@ public class BinanceAPI {
         }
 
         return maxScale;
+
+    }
+
+    public static int getAmountscale(SingleTrade trade) throws IOException {
+
+        CurrencyPair p = getPair(trade.pair);
+
+        Trades trades = marketService.getTrades(p);
+
+        List<Trade> tradess = trades.getTrades();
+
+        int maxDecimals = 0;
+
+
+        for (Trade t : tradess) {
+            System.out.println(t.toString());
+
+            String ss = "";
+
+            ss = t.getOriginalAmount().toString().replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+
+            System.out.println(ss);
+
+            String[] s = ss.split("\\.");
+
+            int m = s[s.length - 1].length();
+
+            if ( (m > maxDecimals) && (Double.parseDouble(ss) % 1 != 0) ) {
+
+                System.out.println("maxdec up, " + m);
+                maxDecimals = m;
+            }
+
+        }
+
+        System.out.println("max decimals - " + maxDecimals);
+
+        return maxDecimals;
+    }
+
+    public static ArrayList<Double> getBidask(SingleTrade singleTrade) throws IOException {
+
+        Ticker t = marketService.getTicker(getPair(singleTrade.pair));
+
+        ArrayList<Double> bidask = new ArrayList<>();
+
+        bidask.add(0, t.getBid().doubleValue());
+        bidask.add(1, t.getAsk().doubleValue());
+
+        return bidask;
+
+
+    }
+
+    public static void getRateLimits() throws InterruptedException, IOException {
+
+        Thread.sleep(5000);
+
+        System.out.println("trying to get limits");
+
+        ExchangeMetaData meta = exchange.getExchangeMetaData();
+
+        System.out.println("meta: " + meta.toString());
+
+//        for (int i = 0; i < limits.length; i++ ) {
+//            System.out.println(limits[i].toString());
+//        }
+
 
     }
 }

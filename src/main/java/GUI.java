@@ -1,3 +1,5 @@
+import org.knowm.xchange.dto.Order;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -27,7 +29,7 @@ public class GUI extends JFrame {
 
     private JPanel pairPickerPanel;
 
-    ArrayList<Trade> trades = new ArrayList<>();
+    ArrayList<SingleTrade> trades = new ArrayList<>();
 
     public GUI(String title) throws IOException {
         super(title);
@@ -167,7 +169,13 @@ public class GUI extends JFrame {
         previewButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                previewButtonPressed();
+                try {
+                    previewButtonPressed();
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
         });
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.NONE;
@@ -308,35 +316,47 @@ public class GUI extends JFrame {
         System.out.println("getting price roundingscale");
         int roundscale = BinanceAPI.getRoundscale(trades.get(0));
 
+        int amtscale = BinanceAPI.getAmountscale(trades.get(0));
+
+        ArrayList<Double> bidask = BinanceAPI.getBidask(trades.get(0));
+
         System.out.println(roundscale);
 
         System.out.println("starting orders..");
 
 
 
-        for (Trade t : trades) {
+        for (SingleTrade t : trades) {
             System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
 
-            String id = BinanceAPI.placeOrder(t, roundscale);
+            if ( (t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price > bidask.get(1)) ) {
 
-            if (id == null) {
-                System.out.println("error placing order!");
-                setTitle("ERROR placing order!");
-                break;
+                setTitle("ERROR: order would execute immediately at market, skipping");
+
             } else {
-                setTitle("order success");
-                Thread.sleep(1000);
+
+                String id = BinanceAPI.placeOrder(t, roundscale, amtscale);
+
+                if (id == null) {
+                    System.out.println("error placing order!");
+                    setTitle("ERROR placing order!");
+                    break;
+                } else {
+                    setTitle("order success");
+                    Thread.sleep(trades.size() > 50 ? 1000 : 300);
+                }
             }
         }
 
     }
 
-    private void placeTrade(Trade t) {
+    private void placeTrade(SingleTrade t) {
 
 
     }
 
-    private void previewButtonPressed() {
+    private void previewButtonPressed() throws InterruptedException, IOException {
+
 
         String pair = pairPicker.getSelectedItem().toString();
 
@@ -371,8 +391,10 @@ public class GUI extends JFrame {
         if (distribution.contains("flat")) {
             singleOrderAmt = totalSize / numberOfOrders;
 
+            System.out.println(singleOrderAmt);
+
             BigDecimal bd = new BigDecimal(Double.toString(singleOrderAmt));
-            bd = bd.setScale(2, RoundingMode.HALF_EVEN);
+            bd = bd.setScale(4, RoundingMode.HALF_EVEN);
 
             singleOrderAmt = bd.doubleValue();
 
@@ -403,7 +425,7 @@ public class GUI extends JFrame {
 
         ordersArea.setText("");
         for (Double p : prices) {
-            trades.add(new Trade(pair, orderType, singleOrderAmt, p));
+            trades.add(new SingleTrade(pair, orderType, singleOrderAmt, p));
             ordersArea.append(pair + " " + orderType + " " + singleOrderAmt + " at " + new BigDecimal(p).setScale(8, RoundingMode.HALF_EVEN) + "\n");
         }
 
