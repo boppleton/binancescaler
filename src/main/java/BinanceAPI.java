@@ -87,21 +87,21 @@ public class BinanceAPI {
 
     private static CurrencyPair getPair(String pair) {
 
-        if (pair.contains("BTCUSD")) {
+        if (pair.contains("BTC/USD")) {
             return CurrencyPair.BTC_USDT;
         } else {
 
             if (pair.contains("BTC")) {
-                String c1 = pair.substring(0, pair.indexOf("BTC"));
+                String c1 = pair.substring(0, pair.indexOf("/BTC"));
                 return new CurrencyPair(new Currency(c1), Currency.BTC);
             } else if (pair.contains("ETH")) {
-                String c1 = pair.substring(0, pair.indexOf("ETH"));
+                String c1 = pair.substring(0, pair.indexOf("/ETH"));
                 return new CurrencyPair(new Currency(c1), Currency.ETH);
             } else if (pair.contains("BNB")) {
-                String c1 = pair.substring(0, pair.indexOf("BNB"));
+                String c1 = pair.substring(0, pair.indexOf("/BNB"));
                 return new CurrencyPair(new Currency(c1), Currency.BNB);
             } else {
-                String c1 = pair.substring(0, pair.indexOf("USDT"));
+                String c1 = pair.substring(0, pair.indexOf("/USDT"));
                 return new CurrencyPair(new Currency(c1), Currency.USDT);
             }
 

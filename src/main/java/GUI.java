@@ -456,7 +456,7 @@ public class GUI extends JFrame {
         for (SingleTrade t : trades) {
             System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
 
-            if ( (t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price > bidask.get(1)) ) {
+            if ( (t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1)) ) {
 
                 setTitle("ERROR: order would execute immediately at market, skipping");
 
