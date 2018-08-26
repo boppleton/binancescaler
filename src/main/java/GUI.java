@@ -1,11 +1,10 @@
+import org.apache.commons.io.FileUtils;
 import org.knowm.xchange.dto.Order;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.ComboPopup;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
+import java.awt.event.*;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -13,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GUI extends JFrame {
@@ -40,7 +41,11 @@ public class GUI extends JFrame {
 
         addAccountButton();
 
+        basePairChecksPanel();
+
     }
+
+
 
     private JComboBox<String> pairPicker;
 
@@ -70,22 +75,112 @@ public class GUI extends JFrame {
         //setup main panel
         scaleMainPanel = new JPanel();
         scaleMainPanel.setLayout(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.NORTHWEST; gbc.fill = GridBagConstraints.BOTH;
         add(scaleMainPanel, gbc);
+
+
+
+
+
         // PAIR PANEL
         JPanel pairPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.weighty = 0; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.fill = GridBagConstraints.NONE;
         scaleMainPanel.add(pairPanel, gbc);
         pairPanel.setBorder(BorderFactory.createTitledBorder("pair"));
         pairPicker = new JComboBox<>();
+        pairPicker.setEditable(true);
+        pairPicker.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println(e.getModifiers());
+                if (e.getModifiers() == 4) {
+                    try {
+                        pickerAddToFavorites(e);
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+                } else if (e.getModifiers() == 8) {
+                    try {
+                        pickerDeleteFavorite(e);
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        });
+        ComboPopup popup = (ComboPopup) pairPicker.getUI().getAccessibleChild(pairPicker, 0);
+        ((JComponent) popup).setPreferredSize(new Dimension(150, 500));
+        ((JComponent) popup).setLayout(new GridLayout(1, 1));
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.weighty = 0; gbc.anchor = GridBagConstraints.NORTHWEST;
         pairPanel.add(pairPicker, gbc);
+
+
         // FILL PAIR PICKER~
         ArrayList<String> pairs = BinanceAPI.getPairs();
-        for (String p : pairs) {
-            pairPicker.addItem(p);
+
+        //first add favorite pairs
+
+        //get lines
+        String fileName = "lines.txt";
+        Object[] s = null;
+        //read file into stream, try-with-resources
+        try (Stream<String> stream = Files.lines(Paths.get(fileName))) {
+
+            s = stream.toArray();
+
+            for (int i = 0; i < s.length; i++) {
+//                acctStringPull(s[i].toString());
+
+                if (s[i].toString().contains("favorite")) {
+                    pairPicker.addItem(s[i].toString().substring(s[i].toString().indexOf("favorite pair:") + 14, s[i].toString().length()));
+                }
+
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        //add all
+        String lastCounter = "";
+        for (String p : pairs) {
+            if (p.endsWith("BTC") && btcpairsCheckbox.isSelected()) {
+                if (!lastCounter.contains(p.substring(0, p.indexOf("BTC")))){
+                    pairPicker.addItem("---");
+                }
+                p = new StringBuilder(p).insert(p.indexOf("BTC"), "/").toString();
+                pairPicker.addItem(p);
+                lastCounter = p.substring(0, p.indexOf("BTC"));
+            } else if (p.endsWith("USDT") && usdtpairsCheckbox.isSelected()) {
+                if (!lastCounter.contains(p.substring(0, p.indexOf("USDT")))){
+                    pairPicker.addItem("---");
+                }
+                p = new StringBuilder(p).insert(p.indexOf("USDT"), "/").toString();
+                pairPicker.addItem(p);
+                lastCounter = p.substring(0, p.indexOf("USDT"));
+            } else if (p.endsWith("ETH") && ethpairsCheckbox.isSelected()) {
+                if (!lastCounter.contains(p.substring(0, p.indexOf("ETH")))){
+                    pairPicker.addItem("---");
+                }
+                p = new StringBuilder(p).insert(p.indexOf("ETH"), "/").toString();
+                pairPicker.addItem(p);
+                lastCounter = p.substring(0, p.indexOf("ETH"));
+            } else if (p.endsWith("BNB") && bnbpairsCheckbox.isSelected()) {
+                if (!lastCounter.contains(p.substring(0, p.indexOf("BNB")))){
+                    pairPicker.addItem("---");
+                }
+                p = new StringBuilder(p).insert(p.indexOf("BNB"), "/").toString();
+                pairPicker.addItem(p);
+                lastCounter = p.substring(0, p.indexOf("BNB"));
+            }
+
+        }
+
+
+
+
 
         // buy or sell radio panel
         JPanel buysellradioPanel = new JPanel(new GridBagLayout());
@@ -162,7 +257,7 @@ public class GUI extends JFrame {
 
         //preview/start button panel
         JPanel buttonsPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(buttonsPanel, gbc);
         //preview button
         JButton previewButton = new JButton("Preview");
@@ -206,7 +301,6 @@ public class GUI extends JFrame {
         //preview Scrollpanel
         ordersArea = new JTextArea();
         ordersArea.setEditable(false);
-        ordersArea.setText("order 1 \norder 2 \norder 3 \n order 4");
         JScrollPane previewScrollpane = new JScrollPane(ordersArea);
         gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH; gbc.gridheight = 6;
         scaleMainPanel.add(previewScrollpane, gbc);
@@ -309,6 +403,39 @@ public class GUI extends JFrame {
 
     }
 
+    //still need to fillPicker with favs at top
+
+    private void pickerDeleteFavorite(ActionEvent e) throws IOException {
+
+        String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1);
+
+        System.out.println("remove from favs " + pair);
+
+        if (!pair.contains("---")) {
+            pairPicker.removeItemAt(pairPicker.getSelectedIndex());
+        }
+
+        java.util.List<String> lines = FileUtils.readLines(new File("lines.txt"));
+        List<String> updatedLines = lines.stream().filter(s -> !s.contains(pair)).collect(Collectors.toList());
+        FileUtils.writeLines(new File("lines.txt"), updatedLines, false);
+
+
+    }
+
+    private void pickerAddToFavorites(ActionEvent e) throws IOException {
+
+        System.out.println("adding to favorites " + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1));
+
+        pairPicker.insertItemAt(e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1), 0);
+
+        String str = "favorite pair:" + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1);
+        BufferedWriter writer = new BufferedWriter(new FileWriter("lines.txt", true));
+        writer.append(str);
+        writer.append('\n');
+
+        writer.close();
+
+    }
 
 
     private void startOrders() throws InterruptedException, IOException {
@@ -347,11 +474,6 @@ public class GUI extends JFrame {
                 }
             }
         }
-
-    }
-
-    private void placeTrade(SingleTrade t) {
-
 
     }
 
@@ -451,6 +573,8 @@ public class GUI extends JFrame {
             chooseAccountPanel.setVisible(false);
             addAccountButton.setEnabled(false);
             addAccountButton.setVisible(false);
+            pairsCheckboxPanel.setEnabled(false);
+            pairsCheckboxPanel.setVisible(false);
 
             startMainScalePanel(accountName);
         }
@@ -466,8 +590,9 @@ public class GUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 1;
-        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
         gbc.insets = new Insets(5,5,5,5);
         addAccountButton = new JButton("New Account");
         add(addAccountButton, gbc);
@@ -484,6 +609,63 @@ public class GUI extends JFrame {
         });
 
     }
+
+
+    private static JPanel pairsCheckboxPanel;
+    private static JCheckBox btcpairsCheckbox;
+    private static JCheckBox usdtpairsCheckbox;
+    private static JCheckBox ethpairsCheckbox;
+    private static JCheckBox bnbpairsCheckbox;
+
+
+    private void basePairChecksPanel() {
+
+        btcpairsCheckbox = new JCheckBox("BTC", true);
+        usdtpairsCheckbox = new JCheckBox("USDT", true);
+        ethpairsCheckbox = new JCheckBox("ETH", true);
+        bnbpairsCheckbox = new JCheckBox("BNB", true);
+
+        pairsCheckboxPanel = new JPanel(new GridBagLayout());
+        pairsCheckboxPanel.setBorder(BorderFactory.createTitledBorder("Base Pairs"));
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.SOUTHWEST;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.insets = new Insets(5,5,5,5);
+        add(pairsCheckboxPanel, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        pairsCheckboxPanel.add(btcpairsCheckbox, gbc);
+
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        pairsCheckboxPanel.add(usdtpairsCheckbox, gbc);
+
+        gbc.gridx = 2;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        pairsCheckboxPanel.add(ethpairsCheckbox, gbc);
+
+        gbc.gridx = 3;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        pairsCheckboxPanel.add(bnbpairsCheckbox, gbc);
+
+
+    }
+
 
     private void newAccountPopup() throws IOException {
 
@@ -567,6 +749,7 @@ public class GUI extends JFrame {
         gbc.anchor = GridBagConstraints.NORTHWEST;
         gbc.weightx = 0;
         gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5,5,5,5);
         add(chooseAccountPanel, gbc);
 
@@ -575,6 +758,9 @@ public class GUI extends JFrame {
 
         fillAccounts();
 
+
+
+
     }
 
     private void fillAccounts() throws IOException {
@@ -582,9 +768,7 @@ public class GUI extends JFrame {
         chooseAccountPanel.removeAll();
 
         String fileName = "lines.txt";
-
         Object[] s = null;
-
         //read file into stream, try-with-resources
         try (Stream<String> stream = Files.lines(Paths.get(fileName))) {
 
@@ -610,14 +794,14 @@ public class GUI extends JFrame {
 
     private void acctStringPull(String line) {
 
-        if (line.length() != 0) {
+        if (line.length() != 0 && !line.contains("favorite")) {
 
 
             String accountName = line.substring(line.indexOf("<<1>>") + 5, line.indexOf("<<2>>"));
             String key = line.substring(line.indexOf("<<2>>") + 5, line.indexOf("<<3>>"));
             String sec = line.substring(line.indexOf("<<3>>") + 5, line.indexOf("<<4>>"));
 
-            JPanel singleAccountPan = new JPanel();
+            JPanel singleAccountPan = new JPanel(new GridBagLayout());
 
             JLabel singleAccountLabel = new JLabel(accountName);
 
@@ -651,9 +835,17 @@ public class GUI extends JFrame {
                 }
             });
 
-            singleAccountPan.add(singleAccountLabel);
-            singleAccountPan.add(singleAccountConnectButton);
-            singleAccountPan.add(singleAccountDeleteButton);
+            gbc.anchor = GridBagConstraints.WEST;
+
+            gbc.gridx = 0;
+            gbc.weightx = 1;
+            singleAccountPan.add(singleAccountLabel, gbc);
+            gbc.gridx = 1;
+            gbc.weightx = 0;
+            singleAccountPan.add(singleAccountConnectButton, gbc);
+            gbc.gridx = 2;
+            gbc.weightx = 0;
+            singleAccountPan.add(singleAccountDeleteButton, gbc);
 
             gbc.gridy = chooseAccountPanel.getComponentCount();
             chooseAccountPanel.add(singleAccountPan, gbc);
