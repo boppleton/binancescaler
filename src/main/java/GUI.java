@@ -638,31 +638,49 @@ public class GUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.weightx = 0;
+        gbc.weightx = 1;
         gbc.weighty = 0;
         pairsCheckboxPanel.add(btcpairsCheckbox, gbc);
 
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.weightx = 0;
+        gbc.weightx = 1;
         gbc.weighty = 0;
         pairsCheckboxPanel.add(usdtpairsCheckbox, gbc);
 
         gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.weightx = 0;
+        gbc.weightx = 1;
         gbc.weighty = 0;
         pairsCheckboxPanel.add(ethpairsCheckbox, gbc);
 
         gbc.gridx = 3;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.weightx = 0;
+        gbc.weightx = 1;
         gbc.weighty = 0;
         pairsCheckboxPanel.add(bnbpairsCheckbox, gbc);
 
+        JLabel baseInstructionsLabel = new JLabel("right click to add a pair to favorites");
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+        gbc.gridwidth = 4;
+        pairsCheckboxPanel.add(baseInstructionsLabel, gbc);
+
+        JLabel baseInstructionsLabel2 = new JLabel("middle click to remove from favorites");
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
+        pairsCheckboxPanel.add(baseInstructionsLabel2, gbc);
+        gbc.gridwidth = 1;
 
     }
 
