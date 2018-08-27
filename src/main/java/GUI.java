@@ -48,7 +48,7 @@ public class GUI extends JFrame {
 
 
     private JComboBox<String> pairPicker;
-    private static HashMap<CurrencyPair, CurrencyPairMetaData> pairs = new HashMap<>();
+    public static HashMap<CurrencyPair, CurrencyPairMetaData> pairs = new HashMap<>();
 
     private static JRadioButton buyRadio;
     private static JRadioButton sellRadio;
@@ -167,6 +167,7 @@ public class GUI extends JFrame {
         //add all
         Set pairset = pairs.keySet();
         ArrayList<CurrencyPair> ps = new ArrayList<>(pairset);
+        Collections.sort(ps);
 
         String lastCounter = "";
         for (int i = 0; i < pairs.size(); i++) {
@@ -178,28 +179,24 @@ public class GUI extends JFrame {
                 if (!lastCounter.contains(p.substring(0, p.indexOf("BTC")))) {
                     pairPicker.addItem("---");
                 }
-                p = new StringBuilder(p).insert(p.indexOf("BTC"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("BTC"));
             } else if (p.endsWith("USDT") && usdtpairsCheckbox.isSelected()) {
                 if (!lastCounter.contains(p.substring(0, p.indexOf("USDT")))) {
                     pairPicker.addItem("---");
                 }
-                p = new StringBuilder(p).insert(p.indexOf("USDT"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("USDT"));
             } else if (p.endsWith("ETH") && ethpairsCheckbox.isSelected()) {
                 if (!lastCounter.contains(p.substring(0, p.indexOf("ETH")))) {
                     pairPicker.addItem("---");
                 }
-                p = new StringBuilder(p).insert(p.indexOf("ETH"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("ETH"));
             } else if (p.endsWith("BNB") && bnbpairsCheckbox.isSelected()) {
                 if (!lastCounter.contains(p.substring(0, p.indexOf("BNB")))) {
                     pairPicker.addItem("---");
                 }
-                p = new StringBuilder(p).insert(p.indexOf("BNB"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("BNB"));
             }
@@ -632,9 +629,9 @@ public class GUI extends JFrame {
     private void startOrders() throws InterruptedException, IOException {
 
         System.out.println("getting price roundingscale");
-        int roundscale = BinanceAPI.getRoundscale(trades.get(0));
+        int roundscale = BinanceAPI.getRoundscale(trades.get(0).pair);
 
-        int amtscale = BinanceAPI.getAmountscale(trades.get(0));
+        int amtscale = BinanceAPI.getAmountscale(trades.get(0).pair);
 
         ArrayList<Double> bidask = BinanceAPI.getBidask(trades.get(0));
 
@@ -698,10 +695,14 @@ public class GUI extends JFrame {
 
     }
 
-    private void makeOrderBatch(String pair, String orderType, double totalSize, int numberOfOrders, double upperPrice, double lowerPrice, String distribution) {
+    private void makeOrderBatch(String pair, String orderType, double totalSize, int numberOfOrders, double upperPrice, double lowerPrice, String distribution) throws IOException {
 
         ArrayList<Double> amounts = new ArrayList<>();
         ArrayList<Double> prices = new ArrayList<>();
+
+        int roundscale = BinanceAPI.getRoundscale(pair);
+
+        int amtscale = BinanceAPI.getAmountscale(pair);
 
         ArrayList<Double> distributedTotal = new ArrayList<>();
         double allSum = 0;
@@ -730,7 +731,7 @@ public class GUI extends JFrame {
 
             if (numberOfOrders > 1) {
 
-                for (int i = 0; (numberOfOrders % 2 == 0 ? i < numberOfOrders : i < numberOfOrders-1); i++) {
+                for (int i = 0; (numberOfOrders % 2 == 0 ? i < numberOfOrders : i < numberOfOrders - 1); i++) {
                     if (add) {
                         double ran = random.nextDouble() * randomStrength;
                         double thisOne = singleOrderAmt * (ran + 1);
@@ -797,9 +798,6 @@ public class GUI extends JFrame {
             }
 
 
-
-
-
             singleOrderAmt = totalSize / numberOfOrders;
             BigDecimal bd = new BigDecimal(Double.toString(singleOrderAmt));
             bd = bd.setScale(4, RoundingMode.HALF_EVEN);
@@ -809,7 +807,6 @@ public class GUI extends JFrame {
             }
 
         }
-
 
 
 //delet?
@@ -832,11 +829,7 @@ public class GUI extends JFrame {
         double rangeAmt = upperPrice - lowerPrice;
         double steps = rangeAmt / (numberOfOrders - 1);
 
-        for (
-                int i = 0;
-                i < numberOfOrders; i++)
-
-        {
+        for (int i = 0; i < numberOfOrders; i++) {
             if (i == 0) {
                 prices.add(upperPrice);
             } else if (i == numberOfOrders - 1) {
@@ -845,16 +838,8 @@ public class GUI extends JFrame {
 
                 BigDecimal bd = new BigDecimal(Double.toString(lowerPrice + (steps * i)));
 
-                int scale = 0;
-                for (int j = 0; i < pairs.size(); j++) {
 
-                    System.out.println("pair: " + pair + " pairs.get(j).tostring: " + pairs.get(j).toString() + " pairs.scale-" + pairs.get(j).getPriceScale());
-
-                    if (pair.contains(pairs.get(j).toString())) {
-                        scale = pairs.get(j).getPriceScale();
-                    }
-                }
-                bd = bd.setScale(8, RoundingMode.HALF_EVEN);
+                bd = bd.setScale(roundscale, RoundingMode.HALF_EVEN);
 
                 prices.add(bd.doubleValue());
             }
@@ -869,8 +854,8 @@ public class GUI extends JFrame {
         for (int i = 0; i < prices.size(); i++)
 
         {
-            trades.add(new SingleTrade(pair, orderType, distributedTotal.get(i), prices.get(i)));
-            ordersArea.append(pair + " " + orderType + " " + distributedTotal.get(i) + " at " + new BigDecimal(prices.get(i)).setScale(8, RoundingMode.HALF_EVEN) + "\n");
+            trades.add(new SingleTrade(pair, orderType, new BigDecimal(distributedTotal.get(i)).setScale(amtscale, RoundingMode.HALF_DOWN).doubleValue(), new BigDecimal(prices.get(i)).setScale(roundscale, RoundingMode.HALF_DOWN).doubleValue()));
+            ordersArea.append(pair + " " + orderType + " " + new BigDecimal(distributedTotal.get(i)).setScale(amtscale, RoundingMode.HALF_DOWN) + " at " + new BigDecimal(prices.get(i)).setScale(roundscale, RoundingMode.HALF_DOWN) + "\n");
         }
 
         startButton.setEnabled(true);
@@ -1254,7 +1239,6 @@ public class GUI extends JFrame {
         acctLinesForDelete.add(s);
 
     }
-
 
 
 }

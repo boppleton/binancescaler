@@ -87,7 +87,7 @@ public class BinanceAPI {
 
     private static CurrencyPair getPair(String pair) {
 
-        if (pair.contains("BTC/USD")) {
+        if (pair.contains("BTC/USDT")) {
             return CurrencyPair.BTC_USDT;
         } else {
 
@@ -130,85 +130,63 @@ public class BinanceAPI {
 
     }
 
-    public static int getRoundscale(SingleTrade trade) throws IOException {
 
-        CurrencyPair p = getPair(trade.pair);
+    public static int getRoundscale(String pair) throws IOException {
 
-        OrderBook o = marketService.getOrderBook(p);
-        List<LimitOrder> orders = o.getBids();
+        System.out.println("geting roundscale, pair: " + pair);
 
-        int depth;
+        CurrencyPair p = getPair(pair);
 
-        if (orders.size() < 50) {
-            depth = orders.size();
-        } else {
-            depth = 50;
-        }
+        System.out.println(GUI.pairs.get(p));
 
-        int maxScale = 0;
+        System.out.println(GUI.pairs.get(p).getPriceScale());
 
-        String etest = "" + orders.get(0).getLimitPrice().doubleValue();
-        System.out.println(etest);
-        if (etest.contains("E")) {
-            return 8;
-        } else {
-
-            for (int i = 0; i < depth; i++) {
-
-                System.out.println(orders.get(i).getLimitPrice().doubleValue());
-
-                Double price = orders.get(i).getLimitPrice().doubleValue();
-
-
-                String[] splitter = price.toString().split("\\.");
-
-                if (splitter[1].length() > maxScale) {
-                    maxScale = splitter[1].length();
-                    System.out.println("maxscale up to " + splitter[1].length());
-                }
-
-            }
-        }
-
-        return maxScale;
+        return GUI.pairs.get(p).getPriceScale();
 
     }
 
-    public static int getAmountscale(SingleTrade trade) throws IOException {
+    public static int getAmountscale(String pair) throws IOException {
 
-        CurrencyPair p = getPair(trade.pair);
+        CurrencyPair p = getPair(pair);
 
-        Trades trades = marketService.getTrades(p);
-
-        List<Trade> tradess = trades.getTrades();
-
-        int maxDecimals = 0;
+        System.out.println("getscle: "+ GUI.pairs.get(p).getMinimumAmount().scale());
 
 
-        for (Trade t : tradess) {
-            System.out.println(t.toString());
+        return GUI.pairs.get(p).getMinimumAmount().scale();
 
-            String ss = "";
-
-            ss = t.getOriginalAmount().toString().replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
-
-            System.out.println(ss);
-
-            String[] s = ss.split("\\.");
-
-            int m = s[s.length - 1].length();
-
-            if ( (m > maxDecimals) && (Double.parseDouble(ss) % 1 != 0) ) {
-
-                System.out.println("maxdec up, " + m);
-                maxDecimals = m;
-            }
-
-        }
-
-        System.out.println("max decimals - " + maxDecimals);
-
-        return maxDecimals;
+//        CurrencyPair p = getPair(trade.pair);
+//
+//        Trades trades = marketService.getTrades(p);
+//
+//        List<Trade> tradess = trades.getTrades();
+//
+//        int maxDecimals = 0;
+//
+//
+//        for (Trade t : tradess) {
+//            System.out.println(t.toString());
+//
+//            String ss = "";
+//
+//            ss = t.getOriginalAmount().toString().replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+//
+//            System.out.println(ss);
+//
+//            String[] s = ss.split("\\.");
+//
+//            int m = s[s.length - 1].length();
+//
+//            if ( (m > maxDecimals) && (Double.parseDouble(ss) % 1 != 0) ) {
+//
+//                System.out.println("maxdec up, " + m);
+//                maxDecimals = m;
+//            }
+//
+//        }
+//
+//        System.out.println("max decimals - " + maxDecimals);
+//
+//        return maxDecimals;
     }
 
     public static ArrayList<Double> getBidask(SingleTrade singleTrade) throws IOException {
