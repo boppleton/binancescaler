@@ -2,6 +2,8 @@ import org.apache.commons.io.FileUtils;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.pushingpixels.substance.api.skin.SubstanceGraphiteAquaLookAndFeel;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.ComboPopup;
@@ -31,7 +33,7 @@ public class GUI extends JFrame {
 
     private JPanel pairPickerPanel;
 
-    ArrayList<SingleTrade> trades = new ArrayList<>();
+    private ArrayList<SingleTrade> trades = new ArrayList<>();
 
     public GUI(String title) throws IOException {
         super(title);
@@ -369,6 +371,8 @@ public class GUI extends JFrame {
         upRadio = new JRadioButton("up");
         downRadio = new JRadioButton("down");
         randomizerRadio = new JRadioButton("randomizer");
+
+
         ButtonGroup distroButtonGroup = new ButtonGroup();
         distroButtonGroup.add(flatRadio);
         distroButtonGroup.add(upRadio);
@@ -662,11 +666,14 @@ public class GUI extends JFrame {
     private void startOrders() throws InterruptedException, IOException {
 
         System.out.println("getting price roundingscale");
-        int roundscale = BinanceAPI.getRoundscale(trades.get(0).pair);
 
-        int amtscale = BinanceAPI.getAmountscale(trades.get(0).pair);
+        SingleTrade t = trades.get(0);
 
-        ArrayList<Double> bidask = BinanceAPI.getBidask(trades.get(0));
+        int roundscale = BinanceAPI.getRoundscale(t.pair);
+
+        int amtscale = BinanceAPI.getAmountscale(t.pair);
+
+        ArrayList<Double> bidask = BinanceAPI.getBidask(t);
 
         System.out.println(roundscale);
 
@@ -674,67 +681,44 @@ public class GUI extends JFrame {
 
 
 
-        startButton.setEnabled(false);
-        startButton.setVisible(false);
-        cancelButton.setEnabled(true);
-        cancelButton.setVisible(true);
-        revalidate();
+        if ((t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1))) {
+
+            setTitle("ERROR: order would execute immediately at market (fundus are safu)");
+
+        } else {
+            Thread t1 = new Thread(new Runnable() {
+                public void run()
+                {
 
 
-        stop = false;
-        Thread t1 = new Thread(new Runnable() {
-            public void run()
-            {
-                for (SingleTrade t : trades) {
 
-                    if (!stop) {
-                        System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
+                    SwingUtilities.invokeLater(() -> {
+                        OrderPlaceWindow orderWindow = null;
+                        try {
+                            UIManager.setLookAndFeel(new SubstanceGraphiteAquaLookAndFeel());
+                        } catch (Exception e) { System.out.println("Substance look&feel load error!"); e.printStackTrace(); }
 
-                        if ((t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1))) {
+                        try {
+                            orderWindow = new OrderPlaceWindow("order placer", new ArrayList<>(trades), bidask, amtscale, roundscale);
+                        } catch (Exception e) { System.out.println("window object create error"); e.printStackTrace(); }
 
-                            setTitle("ERROR: order would execute immediately at market, skipping");
-
-                        } else {
-
-                            String id = null;
-                            try {
-                                setTitle("placing order..");
-                                id = BinanceAPI.placeOrder(t, roundscale, amtscale);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-
-                            if (id == null) {
-                                System.out.println("error placing order!");
-                                setTitle("error placing order!");
-                                break;
-                            } else {
-                                setTitle("order success - " + id);
-                                try {
-                                    Thread.sleep(trades.size() > 50 ? 1000 : 300);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                            }
+                        if (orderWindow != null) {
+                            orderWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+                            orderWindow.setSize(300, 500);
+                            orderWindow.setLocationRelativeTo(null);
+                            orderWindow.setVisible(true);
                         }
-                    } else {
-                        setTitle("order loop terminated");
-                        break;
-
-                    }
-                }
-
-                stop=false;
-                startButton.setEnabled(true);
-                startButton.setVisible(true);
-                cancelButton.setEnabled(false);
-                cancelButton.setVisible(false);
-                revalidate();
+                    });
 
 
 
-            }});
-        t1.start();
+
+                }});
+            t1.start();
+
+        }
+
+
 
 
 
