@@ -13,6 +13,8 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.RateLimit;
 import org.knowm.xchange.dto.trade.LimitOrder;
@@ -22,9 +24,7 @@ import org.knowm.xchange.service.trade.TradeService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class BinanceAPI {
 
@@ -109,19 +109,24 @@ public class BinanceAPI {
 
     }
 
-    public static ArrayList<String> getPairs() throws IOException {
+    public static HashMap<CurrencyPair, CurrencyPairMetaData> getPairs() throws IOException {
 
-        List<BinancePriceQuantity> tickers = marketServiceRaw.tickerAllBookTickers();
+//        List<BinancePriceQuantity> tickers = marketServiceRaw.tickerAllBookTickers();
 
-        ArrayList<String> pairs = new ArrayList<>();
+        ExchangeMetaData meta = exchange.getExchangeMetaData();
 
-        for (BinancePriceQuantity p : tickers) {
-                pairs.add(p.symbol);
-        }
+        HashMap metamap = (HashMap) meta.getCurrencyPairs();
 
-        Collections.sort(pairs);
+//
+//        ArrayList<String> pairs = new ArrayList<>();
+//
+//        for (BinancePriceQuantity p : tickers) {
+//                pairs.add(p.symbol);
+//        }
+//
+//        Collections.sort(pairs);
 
-        return pairs;
+        return metamap;
 
     }
 
@@ -222,18 +227,8 @@ public class BinanceAPI {
 
     public static void getRateLimits() throws InterruptedException, IOException {
 
-        Thread.sleep(5000);
 
-        System.out.println("trying to get limits");
-
-        ExchangeMetaData meta = exchange.getExchangeMetaData();
-
-        System.out.println("meta: " + meta.toString());
-
-//        for (int i = 0; i < limits.length; i++ ) {
-//            System.out.println(limits[i].toString());
-//        }
-
+        System.out.println(exchange.getExchangeMetaData().toString());
 
     }
 }

@@ -6,10 +6,9 @@ public class Main {
 
     private static GUI gui = null;
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
 
         startGUI();
-
 
     }
 
@@ -26,7 +25,7 @@ public class Main {
 
             if (gui != null) {
                 gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                gui.setSize(420, 600);
+                gui.setSize(450, 620);
                 gui.setLocationRelativeTo(null);
                 gui.setVisible(true);
             }

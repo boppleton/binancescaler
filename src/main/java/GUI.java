@@ -1,5 +1,7 @@
 import org.apache.commons.io.FileUtils;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.ComboPopup;
@@ -10,8 +12,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,8 +47,8 @@ public class GUI extends JFrame {
     }
 
 
-
     private JComboBox<String> pairPicker;
+    private static HashMap<CurrencyPair, CurrencyPairMetaData> pairs = new HashMap<>();
 
     private static JRadioButton buyRadio;
     private static JRadioButton sellRadio;
@@ -61,12 +62,16 @@ public class GUI extends JFrame {
     private static JRadioButton flatRadio;
     private static JRadioButton upRadio;
     private static JRadioButton downRadio;
+    private static JRadioButton randomizerRadio;
+    private static double randomStrength = .3;
 
     private static JTextArea ordersArea;
 
     private static JButton startButton;
 
-    
+    private static JLabel baseorcounterLabel = new JLabel();
+    private static String baseorcounterString = "Counter";
+
     private void startMainScalePanel(String accountName) throws IOException {
 
         //connected, set title
@@ -75,16 +80,22 @@ public class GUI extends JFrame {
         //setup main panel
         scaleMainPanel = new JPanel();
         scaleMainPanel.setLayout(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.NORTHWEST; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.fill = GridBagConstraints.BOTH;
         add(scaleMainPanel, gbc);
-
-
-
 
 
         // PAIR PANEL
         JPanel pairPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.weighty = 0; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
         gbc.fill = GridBagConstraints.NONE;
         scaleMainPanel.add(pairPanel, gbc);
         pairPanel.setBorder(BorderFactory.createTitledBorder("pair"));
@@ -93,7 +104,11 @@ public class GUI extends JFrame {
         pairPicker.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println(e.getModifiers());
+                System.out.println(e);
+
+
+                setBaseorcounter(e);
+
                 if (e.getModifiers() == 4) {
                     try {
                         pickerAddToFavorites(e);
@@ -113,12 +128,18 @@ public class GUI extends JFrame {
         ((JComponent) popup).setPreferredSize(new Dimension(150, 500));
         ((JComponent) popup).setLayout(new GridLayout(1, 1));
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.weighty = 0; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
         pairPanel.add(pairPicker, gbc);
 
 
         // FILL PAIR PICKER~
-        ArrayList<String> pairs = BinanceAPI.getPairs();
+        pairs = BinanceAPI.getPairs();
+
+        System.out.println(pairs.get(CurrencyPair.NEO_BTC));
 
         //first add favorite pairs
 
@@ -144,31 +165,38 @@ public class GUI extends JFrame {
         }
 
         //add all
+        Set pairset = pairs.keySet();
+        ArrayList<CurrencyPair> ps = new ArrayList<>(pairset);
+
         String lastCounter = "";
-        for (String p : pairs) {
+        for (int i = 0; i < pairs.size(); i++) {
+
+            String p = ps.get(i).toString();
+
+
             if (p.endsWith("BTC") && btcpairsCheckbox.isSelected()) {
-                if (!lastCounter.contains(p.substring(0, p.indexOf("BTC")))){
+                if (!lastCounter.contains(p.substring(0, p.indexOf("BTC")))) {
                     pairPicker.addItem("---");
                 }
                 p = new StringBuilder(p).insert(p.indexOf("BTC"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("BTC"));
             } else if (p.endsWith("USDT") && usdtpairsCheckbox.isSelected()) {
-                if (!lastCounter.contains(p.substring(0, p.indexOf("USDT")))){
+                if (!lastCounter.contains(p.substring(0, p.indexOf("USDT")))) {
                     pairPicker.addItem("---");
                 }
                 p = new StringBuilder(p).insert(p.indexOf("USDT"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("USDT"));
             } else if (p.endsWith("ETH") && ethpairsCheckbox.isSelected()) {
-                if (!lastCounter.contains(p.substring(0, p.indexOf("ETH")))){
+                if (!lastCounter.contains(p.substring(0, p.indexOf("ETH")))) {
                     pairPicker.addItem("---");
                 }
                 p = new StringBuilder(p).insert(p.indexOf("ETH"), "/").toString();
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("ETH"));
             } else if (p.endsWith("BNB") && bnbpairsCheckbox.isSelected()) {
-                if (!lastCounter.contains(p.substring(0, p.indexOf("BNB")))){
+                if (!lastCounter.contains(p.substring(0, p.indexOf("BNB")))) {
                     pairPicker.addItem("---");
                 }
                 p = new StringBuilder(p).insert(p.indexOf("BNB"), "/").toString();
@@ -179,12 +207,13 @@ public class GUI extends JFrame {
         }
 
 
-
-
-
         // buy or sell radio panel
         JPanel buysellradioPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
         scaleMainPanel.add(buysellradioPanel, gbc);
         buysellradioPanel.setBorder(BorderFactory.createTitledBorder("order type"));
         buyRadio = new JRadioButton("Buy");
@@ -193,71 +222,186 @@ public class GUI extends JFrame {
         ButtonGroup buysellGroup = new ButtonGroup();
         buysellGroup.add(buyRadio);
         buysellGroup.add(sellRadio);
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         buysellradioPanel.add(buyRadio, gbc);
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         buysellradioPanel.add(sellRadio, gbc);
 
         //total amt panel
         JPanel totalAmtPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(totalAmtPanel, gbc);
         totalAmtPanel.setBorder(BorderFactory.createTitledBorder("total size"));
         totalAmtField = new JTextField();
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         totalAmtPanel.add(totalAmtField, gbc);
+
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        baseorcounterLabel.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+
+                String currentPair = pairPicker.getSelectedItem().toString();
+
+                System.out.println(currentPair);
+
+                toggleCounterorbase(currentPair);
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+        totalAmtPanel.add(baseorcounterLabel, gbc);
+
 
         //order qty panel
         JPanel orderQtyPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(orderQtyPanel, gbc);
         orderQtyPanel.setBorder(BorderFactory.createTitledBorder("# of orders"));
         orderQtyField = new JTextField();
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         orderQtyPanel.add(orderQtyField, gbc);
 
         //startprice panel
         JPanel startpricePanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(startpricePanel, gbc);
         startpricePanel.setBorder(BorderFactory.createTitledBorder("upper price"));
         startpriceField = new JTextField();
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         startpricePanel.add(startpriceField, gbc);
 
         //endprice panel
         JPanel endpricePanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(endpricePanel, gbc);
         endpricePanel.setBorder(BorderFactory.createTitledBorder("lower price"));
         endpriceField = new JTextField();
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         endpricePanel.add(endpriceField, gbc);
 
         //distribution panel
         JPanel distributionPanl = new JPanel(new GridBagLayout());
         distributionPanl.setBorder(BorderFactory.createTitledBorder("distribution"));
-        gbc.gridx = 0; gbc.gridy = 6; gbc.weightx = .1; gbc.weighty = .1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        gbc.weightx = .1;
+        gbc.weighty = .1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(distributionPanl, gbc);
         flatRadio = new JRadioButton("flat");
         flatRadio.setSelected(true);
         upRadio = new JRadioButton("up");
         downRadio = new JRadioButton("down");
+        randomizerRadio = new JRadioButton("randomizer");
         ButtonGroup distroButtonGroup = new ButtonGroup();
         distroButtonGroup.add(flatRadio);
         distroButtonGroup.add(upRadio);
         distroButtonGroup.add(downRadio);
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        distroButtonGroup.add(randomizerRadio);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         distributionPanl.add(flatRadio, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         distributionPanl.add(upRadio, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         distributionPanl.add(downRadio, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        distributionPanl.add(randomizerRadio, gbc);
 
 
         //preview/start button panel
         JPanel buttonsPanel = new JPanel(new GridBagLayout());
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(buttonsPanel, gbc);
         //preview button
         JButton previewButton = new JButton("Preview");
@@ -273,11 +417,21 @@ public class GUI extends JFrame {
                 }
             }
         });
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.NONE;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
         buttonsPanel.add(previewButton, gbc);
         //startButton
         startButton = new JButton("Start");
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.NONE;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
         buttonsPanel.add(startButton, gbc);
         startButton.setEnabled(false);
         startButton.addActionListener(new ActionListener() {
@@ -302,10 +456,14 @@ public class GUI extends JFrame {
         ordersArea = new JTextArea();
         ordersArea.setEditable(false);
         JScrollPane previewScrollpane = new JScrollPane(ordersArea);
-        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1; gbc.weighty = 1; gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.BOTH; gbc.gridheight = 6;
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridheight = 6;
         scaleMainPanel.add(previewScrollpane, gbc);
-
-
 
 
         //EVENTLISTENERS FOR STARTBUTTON
@@ -400,14 +558,47 @@ public class GUI extends JFrame {
         });
 
 
+    }
 
+    private void toggleCounterorbase(String pair) {
+
+        String counter = pair.substring(0, pair.indexOf("/"));
+        String base = pair.substring(pair.indexOf("/") + 1, pair.length());
+
+        if (counter.contains("BTC") || counter.contains("ETH") || counter.contains("USDT") || counter.contains("BNB")) {
+
+            if (baseorcounterLabel.getText().contains(counter)) {
+                baseorcounterLabel.setText(base);
+            } else {
+                baseorcounterLabel.setText(counter);
+            }
+
+
+        } else if (baseorcounterLabel.getText().contains("BTC") || baseorcounterLabel.getText().contains("ETH") || baseorcounterLabel.getText().contains("USDT") || baseorcounterLabel.getText().contains("BNB")) {
+
+            baseorcounterLabel.setText(counter);
+        } else {
+            baseorcounterLabel.setText(base);
+        }
+
+
+    }
+
+    private void setBaseorcounter(ActionEvent e) {
+
+        String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1);
+
+        String counter = pair.substring(0, pair.indexOf("/"));
+        String base = pair.substring(pair.indexOf("/") + 1, pair.length());
+
+        baseorcounterLabel.setText(counter);
     }
 
     //still need to fillPicker with favs at top
 
     private void pickerDeleteFavorite(ActionEvent e) throws IOException {
 
-        String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1);
+        String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1);
 
         System.out.println("remove from favs " + pair);
 
@@ -424,11 +615,11 @@ public class GUI extends JFrame {
 
     private void pickerAddToFavorites(ActionEvent e) throws IOException {
 
-        System.out.println("adding to favorites " + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1));
+        System.out.println("adding to favorites " + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1));
 
-        pairPicker.insertItemAt(e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1), 0);
+        pairPicker.insertItemAt(e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1), 0);
 
-        String str = "favorite pair:" + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length()-1);
+        String str = "favorite pair:" + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1);
         BufferedWriter writer = new BufferedWriter(new FileWriter("lines.txt", true));
         writer.append(str);
         writer.append('\n');
@@ -452,11 +643,10 @@ public class GUI extends JFrame {
         System.out.println("starting orders..");
 
 
-
         for (SingleTrade t : trades) {
             System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
 
-            if ( (t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1)) ) {
+            if ((t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1))) {
 
                 setTitle("ERROR: order would execute immediately at market, skipping");
 
@@ -483,7 +673,7 @@ public class GUI extends JFrame {
         String pair = pairPicker.getSelectedItem().toString();
 
 
-        String orderType = buyRadio.isSelected() ? "Buy":"Sell";
+        String orderType = buyRadio.isSelected() ? "Buy" : "Sell";
 
         double totalSize = Double.parseDouble(totalAmtField.getText());
         int numberOfOrders = Integer.parseInt(orderQtyField.getText());
@@ -498,6 +688,8 @@ public class GUI extends JFrame {
             distribution = "up";
         } else if (downRadio.isSelected()) {
             distribution = "down";
+        } else if (randomizerRadio.isSelected()) {
+            distribution = "randomizer";
         }
 
 
@@ -508,33 +700,160 @@ public class GUI extends JFrame {
 
     private void makeOrderBatch(String pair, String orderType, double totalSize, int numberOfOrders, double upperPrice, double lowerPrice, String distribution) {
 
+        ArrayList<Double> amounts = new ArrayList<>();
+        ArrayList<Double> prices = new ArrayList<>();
+
+        ArrayList<Double> distributedTotal = new ArrayList<>();
+        double allSum = 0;
+
         double singleOrderAmt = 0;
-
         if (distribution.contains("flat")) {
-            singleOrderAmt = totalSize / numberOfOrders;
 
-            System.out.println(singleOrderAmt);
+            singleOrderAmt = totalSize / numberOfOrders;
 
             BigDecimal bd = new BigDecimal(Double.toString(singleOrderAmt));
             bd = bd.setScale(4, RoundingMode.HALF_EVEN);
 
             singleOrderAmt = bd.doubleValue();
 
+            for (int i = 0; i < numberOfOrders; i++) {
+                distributedTotal.add(singleOrderAmt);
+            }
+
+        } else if (distribution.contains("randomizer")) {
+            Random random = new Random();
+            singleOrderAmt = totalSize / numberOfOrders;
+            System.out.println(random.nextDouble());
+
+            boolean add = true;
+            double diff = 0;
+
+            if (numberOfOrders > 1) {
+
+                for (int i = 0; (numberOfOrders % 2 == 0 ? i < numberOfOrders : i < numberOfOrders-1); i++) {
+                    if (add) {
+                        double ran = random.nextDouble() * randomStrength;
+                        double thisOne = singleOrderAmt * (ran + 1);
+                        distributedTotal.add(i, thisOne);
+                        diff = singleOrderAmt - thisOne;
+                        add = false;
+                    } else {
+                        distributedTotal.add(singleOrderAmt + diff);
+                        add = true;
+                    }
+                }
+                if (distributedTotal.size() < numberOfOrders) {
+                    distributedTotal.add(singleOrderAmt);
+                }
+            } else {
+                distributedTotal.add(singleOrderAmt);
+            }
+
+
+            for (int i = 0; i < distributedTotal.size(); i++) {
+                //add all
+                allSum += distributedTotal.get(i);
+            }
+
+
+        } else if (distribution.contains("up") || distribution.contains("down")) {
+
+            ArrayList<Double> pricePointPercentages = new ArrayList<>();
+
+            // Min and max percentage of the amount allocated per price point
+            double minPercentage = 0.05;
+            double maxPercentage = 0.4;
+
+
+            for (int i = 0; i < numberOfOrders; i++) {
+                pricePointPercentages.add(i, (minPercentage + (i * (maxPercentage - minPercentage)) / (numberOfOrders + 1)));
+            }
+
+
+            double leftover = 0;
+            double distributionSum = 0;
+            for (Double d : pricePointPercentages) {
+                distributionSum += d;
+            }
+
+            for (int i = 0; i < pricePointPercentages.size(); i++) {
+
+                double val = (pricePointPercentages.get(i) * totalSize) / distributionSum + leftover;
+
+//                double weightedValue = Math.trunc(val);
+//                leftover = val % 1;
+
+                distributedTotal.add(val);
+
+            }
+
+            for (int i = 0; i < distributedTotal.size(); i++) {
+                //add all
+                allSum += distributedTotal.get(i);
+            }
+
+            if (distribution.contains("up")) {
+                Collections.reverse(distributedTotal);
+            }
+
+
+
+
+
+            singleOrderAmt = totalSize / numberOfOrders;
+            BigDecimal bd = new BigDecimal(Double.toString(singleOrderAmt));
+            bd = bd.setScale(4, RoundingMode.HALF_EVEN);
+            singleOrderAmt = bd.doubleValue();
+            for (int i = 0; i < numberOfOrders; i++) {
+                amounts.add(singleOrderAmt);
+            }
+
         }
 
-        ArrayList<Double> prices = new ArrayList<>();
 
-        double rangeAmt = upperPrice-lowerPrice;
-        double steps = rangeAmt / (numberOfOrders-1);
 
-        for (int i = 0; i < numberOfOrders; i++) {
+//delet?
+//        // get amounts
+//        boolean baseOrCounterBool = false;
+//        String counter = pair.substring(0, pair.indexOf("/"));
+//        String base = pair.substring(pair.indexOf("/") + 1, pair.length());
+//
+//        System.out.println("counter: " + counter);
+//
+//        //if current field is same as pair base
+//        if (base.contains(baseorcounterLabel.getText()))
+//
+//        {
+//            System.out.println(pair + ", base (" + base + ")");
+//            baseOrCounterBool = true;
+//        }
+
+
+        double rangeAmt = upperPrice - lowerPrice;
+        double steps = rangeAmt / (numberOfOrders - 1);
+
+        for (
+                int i = 0;
+                i < numberOfOrders; i++)
+
+        {
             if (i == 0) {
                 prices.add(upperPrice);
-            } else if (i == numberOfOrders-1) {
+            } else if (i == numberOfOrders - 1) {
                 prices.add(lowerPrice);
             } else {
 
                 BigDecimal bd = new BigDecimal(Double.toString(lowerPrice + (steps * i)));
+
+                int scale = 0;
+                for (int j = 0; i < pairs.size(); j++) {
+
+                    System.out.println("pair: " + pair + " pairs.get(j).tostring: " + pairs.get(j).toString() + " pairs.scale-" + pairs.get(j).getPriceScale());
+
+                    if (pair.contains(pairs.get(j).toString())) {
+                        scale = pairs.get(j).getPriceScale();
+                    }
+                }
                 bd = bd.setScale(8, RoundingMode.HALF_EVEN);
 
                 prices.add(bd.doubleValue());
@@ -543,15 +862,25 @@ public class GUI extends JFrame {
 
         Collections.sort(prices);
 
+
         trades.clear();
 
         ordersArea.setText("");
-        for (Double p : prices) {
-            trades.add(new SingleTrade(pair, orderType, singleOrderAmt, p));
-            ordersArea.append(pair + " " + orderType + " " + singleOrderAmt + " at " + new BigDecimal(p).setScale(8, RoundingMode.HALF_EVEN) + "\n");
+        for (int i = 0; i < prices.size(); i++)
+
+        {
+            trades.add(new SingleTrade(pair, orderType, distributedTotal.get(i), prices.get(i)));
+            ordersArea.append(pair + " " + orderType + " " + distributedTotal.get(i) + " at " + new BigDecimal(prices.get(i)).setScale(8, RoundingMode.HALF_EVEN) + "\n");
         }
 
         startButton.setEnabled(true);
+
+
+        for (int i = 0; i < prices.size(); i++) {
+
+            System.out.println("price: " + prices.get(i) + " amt: " + distributedTotal.get(i) + " total: " + allSum);
+
+        }
 
 
     }
@@ -580,9 +909,6 @@ public class GUI extends JFrame {
         }
 
 
-
-
-
     }
 
     private void addAccountButton() {
@@ -593,7 +919,7 @@ public class GUI extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.weightx = 0;
         gbc.weighty = 0;
-        gbc.insets = new Insets(5,5,5,5);
+        gbc.insets = new Insets(5, 5, 5, 5);
         addAccountButton = new JButton("New Account");
         add(addAccountButton, gbc);
 
@@ -632,7 +958,7 @@ public class GUI extends JFrame {
         gbc.anchor = GridBagConstraints.SOUTHWEST;
         gbc.weightx = 1;
         gbc.weighty = 1;
-        gbc.insets = new Insets(5,5,5,5);
+        gbc.insets = new Insets(5, 5, 5, 5);
         add(pairsCheckboxPanel, gbc);
 
         gbc.gridx = 0;
@@ -768,15 +1094,13 @@ public class GUI extends JFrame {
         gbc.weightx = 0;
         gbc.weighty = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5,5,5,5);
+        gbc.insets = new Insets(5, 5, 5, 5);
         add(chooseAccountPanel, gbc);
 
 
         add(noAccountsLabel, gbc);
 
         fillAccounts();
-
-
 
 
     }
@@ -931,19 +1255,6 @@ public class GUI extends JFrame {
 
     }
 
-    private void setupPairPicker() throws IOException {
-
-        pairPickerPanel = new JPanel(new GridBagLayout());
-        pairPickerPanel.setBorder(BorderFactory.createTitledBorder("Pair"));
-        pairPicker = new JComboBox<>();
-
-        ArrayList<String> pairs = BinanceAPI.getPairs();
-
-        for (String p : pairs) {
-            pairPicker.addItem(p);
-        }
-        add(pairPicker);
-    }
 
 
 }
