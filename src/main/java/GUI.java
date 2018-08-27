@@ -68,9 +68,14 @@ public class GUI extends JFrame {
     private static JTextArea ordersArea;
 
     private static JButton startButton;
+    private static JButton cancelButton;
+
 
     private static JLabel baseorcounterLabel = new JLabel();
     private static String baseorcounterString = "Counter";
+
+
+    private static boolean stop = false;;
 
     private void startMainScalePanel(String accountName) throws IOException {
 
@@ -264,7 +269,11 @@ public class GUI extends JFrame {
 
                 System.out.println(currentPair);
 
-                toggleCounterorbase(currentPair);
+                try {
+                    toggleCounterorbase(currentPair);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
 
             }
 
@@ -448,6 +457,23 @@ public class GUI extends JFrame {
                 }
             }
         });
+        //cancelButton
+        cancelButton = new JButton("Cancel");
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        buttonsPanel.add(cancelButton, gbc);
+        cancelButton.setEnabled(false);
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stop = true;
+
+            }
+        });
 
         //preview Scrollpanel
         ordersArea = new JTextArea();
@@ -557,7 +583,10 @@ public class GUI extends JFrame {
 
     }
 
-    private void toggleCounterorbase(String pair) {
+    private void toggleCounterorbase(String pair) throws IOException {
+
+        int roundscale = BinanceAPI.getRoundscale(pair);
+        int amtscale = BinanceAPI.getAmountscale(pair);
 
         String counter = pair.substring(0, pair.indexOf("/"));
         String base = pair.substring(pair.indexOf("/") + 1, pair.length());
@@ -566,16 +595,20 @@ public class GUI extends JFrame {
 
             if (baseorcounterLabel.getText().contains(counter)) {
                 baseorcounterLabel.setText(base);
+                totalAmtField.setText( new BigDecimal(Double.parseDouble(totalAmtField.getText()) * ((Double.parseDouble(startpriceField.getText())+Double.parseDouble(endpriceField.getText()))/2)).setScale(roundscale, RoundingMode.HALF_DOWN) + "");
             } else {
                 baseorcounterLabel.setText(counter);
+                totalAmtField.setText( new BigDecimal(Double.parseDouble(totalAmtField.getText()) / ((Double.parseDouble(startpriceField.getText())+Double.parseDouble(endpriceField.getText()))/2)).setScale(amtscale, RoundingMode.HALF_DOWN) + "");
             }
 
 
         } else if (baseorcounterLabel.getText().contains("BTC") || baseorcounterLabel.getText().contains("ETH") || baseorcounterLabel.getText().contains("USDT") || baseorcounterLabel.getText().contains("BNB")) {
 
             baseorcounterLabel.setText(counter);
+            totalAmtField.setText( new BigDecimal(Double.parseDouble(totalAmtField.getText()) / ((Double.parseDouble(startpriceField.getText())+Double.parseDouble(endpriceField.getText()))/2)).setScale(amtscale, RoundingMode.HALF_DOWN) + "");
         } else {
             baseorcounterLabel.setText(base);
+            totalAmtField.setText( new BigDecimal(Double.parseDouble(totalAmtField.getText()) * ((Double.parseDouble(startpriceField.getText())+Double.parseDouble(endpriceField.getText()))/2)).setScale(roundscale, RoundingMode.HALF_DOWN) + "");
         }
 
 
@@ -640,27 +673,72 @@ public class GUI extends JFrame {
         System.out.println("starting orders..");
 
 
-        for (SingleTrade t : trades) {
-            System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
 
-            if ((t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1))) {
+        startButton.setEnabled(false);
+        startButton.setVisible(false);
+        cancelButton.setEnabled(true);
+        cancelButton.setVisible(true);
+        revalidate();
 
-                setTitle("ERROR: order would execute immediately at market, skipping");
 
-            } else {
+        stop = false;
+        Thread t1 = new Thread(new Runnable() {
+            public void run()
+            {
+                for (SingleTrade t : trades) {
 
-                String id = BinanceAPI.placeOrder(t, roundscale, amtscale);
+                    if (!stop) {
+                        System.out.println(t.pair + " " + t.side + " " + t.amt + " at " + t.price);
 
-                if (id == null) {
-                    System.out.println("error placing order!");
-                    setTitle("ERROR placing order!");
-                    break;
-                } else {
-                    setTitle("order success");
-                    Thread.sleep(trades.size() > 50 ? 1000 : 300);
+                        if ((t.side == Order.OrderType.BID && t.price > bidask.get(0)) || (t.side == Order.OrderType.ASK && t.price < bidask.get(1))) {
+
+                            setTitle("ERROR: order would execute immediately at market, skipping");
+
+                        } else {
+
+                            String id = null;
+                            try {
+                                setTitle("placing order..");
+                                id = BinanceAPI.placeOrder(t, roundscale, amtscale);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            if (id == null) {
+                                System.out.println("error placing order!");
+                                setTitle("error placing order!");
+                                break;
+                            } else {
+                                setTitle("order success - " + id);
+                                try {
+                                    Thread.sleep(trades.size() > 50 ? 1000 : 300);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    } else {
+                        setTitle("order loop terminated");
+                        break;
+
+                    }
                 }
-            }
-        }
+
+                stop=false;
+                startButton.setEnabled(true);
+                startButton.setVisible(true);
+                cancelButton.setEnabled(false);
+                cancelButton.setVisible(false);
+                revalidate();
+
+
+
+            }});
+        t1.start();
+
+
+
+
 
     }
 
@@ -672,11 +750,15 @@ public class GUI extends JFrame {
 
         String orderType = buyRadio.isSelected() ? "Buy" : "Sell";
 
-        double totalSize = Double.parseDouble(totalAmtField.getText());
+
+
+
         int numberOfOrders = Integer.parseInt(orderQtyField.getText());
 
         double upperPrice = Double.parseDouble(startpriceField.getText());
         double lowerPrice = Double.parseDouble(endpriceField.getText());
+
+        double totalSize = Double.parseDouble(totalAmtField.getText());
 
         String distribution = "flat";
         if (flatRadio.isSelected()) {
@@ -699,10 +781,35 @@ public class GUI extends JFrame {
 
         ArrayList<Double> amounts = new ArrayList<>();
         ArrayList<Double> prices = new ArrayList<>();
-
         int roundscale = BinanceAPI.getRoundscale(pair);
-
         int amtscale = BinanceAPI.getAmountscale(pair);
+
+        double rangeAmt = upperPrice - lowerPrice;
+        double steps = rangeAmt / (numberOfOrders - 1);
+
+        for (int i = 0; i < numberOfOrders; i++) {
+            if (i == 0) {
+                prices.add(upperPrice);
+            } else if (i == numberOfOrders - 1) {
+                prices.add(lowerPrice);
+            } else {
+
+                BigDecimal bd = new BigDecimal(Double.toString(lowerPrice + (steps * i)));
+
+
+                bd = bd.setScale(roundscale, RoundingMode.HALF_EVEN);
+
+                prices.add(bd.doubleValue());
+            }
+        }
+
+        Collections.sort(prices);
+
+
+
+
+
+
 
         ArrayList<Double> distributedTotal = new ArrayList<>();
         double allSum = 0;
@@ -717,14 +824,25 @@ public class GUI extends JFrame {
 
             singleOrderAmt = bd.doubleValue();
 
-            for (int i = 0; i < numberOfOrders; i++) {
+
+            if (pair.endsWith(baseorcounterLabel.getText())){
+                for (int i = 0; i < numberOfOrders; i++) {
+                    System.out.println("totalsize: " + totalSize + "num orders: " + numberOfOrders + " price: " + prices.get(i));
+                    singleOrderAmt = (totalSize / numberOfOrders)/prices.get(i);
+                    distributedTotal.add((singleOrderAmt)); //current price / total amt
+                }
+
+            } else {
+                for (int i = 0; i < numberOfOrders; i++) {
                 distributedTotal.add(singleOrderAmt);
+                }
             }
 
         } else if (distribution.contains("randomizer")) {
             Random random = new Random();
-            singleOrderAmt = totalSize / numberOfOrders;
-            System.out.println(random.nextDouble());
+
+
+
 
             boolean add = true;
             double diff = 0;
@@ -732,6 +850,13 @@ public class GUI extends JFrame {
             if (numberOfOrders > 1) {
 
                 for (int i = 0; (numberOfOrders % 2 == 0 ? i < numberOfOrders : i < numberOfOrders - 1); i++) {
+
+                    if (pair.endsWith(baseorcounterLabel.getText())){
+                        singleOrderAmt = (totalSize / numberOfOrders)/prices.get(i);
+                    } else{
+                        singleOrderAmt = totalSize / numberOfOrders;
+                    }
+
                     if (add) {
                         double ran = random.nextDouble() * randomStrength;
                         double thisOne = singleOrderAmt * (ran + 1);
@@ -781,8 +906,9 @@ public class GUI extends JFrame {
 
                 double val = (pricePointPercentages.get(i) * totalSize) / distributionSum + leftover;
 
-//                double weightedValue = Math.trunc(val);
-//                leftover = val % 1;
+                if (pair.endsWith(baseorcounterLabel.getText())){
+                    val /= prices.get(i);
+                }
 
                 distributedTotal.add(val);
 
@@ -826,26 +952,7 @@ public class GUI extends JFrame {
 //        }
 
 
-        double rangeAmt = upperPrice - lowerPrice;
-        double steps = rangeAmt / (numberOfOrders - 1);
 
-        for (int i = 0; i < numberOfOrders; i++) {
-            if (i == 0) {
-                prices.add(upperPrice);
-            } else if (i == numberOfOrders - 1) {
-                prices.add(lowerPrice);
-            } else {
-
-                BigDecimal bd = new BigDecimal(Double.toString(lowerPrice + (steps * i)));
-
-
-                bd = bd.setScale(roundscale, RoundingMode.HALF_EVEN);
-
-                prices.add(bd.doubleValue());
-            }
-        }
-
-        Collections.sort(prices);
 
 
         trades.clear();
