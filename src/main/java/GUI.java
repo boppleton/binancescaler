@@ -3,6 +3,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.omg.PortableInterceptor.NON_EXISTENT;
 import org.pushingpixels.substance.api.skin.SubstanceGraphiteAquaLookAndFeel;
 
 import javax.swing.*;
@@ -74,10 +75,8 @@ public class GUI extends JFrame {
 
 
     private static JLabel baseorcounterLabel = new JLabel();
-    private static String baseorcounterString = "Counter";
 
-
-    private static boolean stop = false;;
+    private static JSlider weightSlider;
 
     private void startMainScalePanel(String accountName) throws IOException {
 
@@ -312,13 +311,33 @@ public class GUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(orderQtyPanel, gbc);
         orderQtyPanel.setBorder(BorderFactory.createTitledBorder("# of orders"));
-        orderQtyField = new JTextField();
+        orderQtyField = new JTextField(3);
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1;
-        gbc.weighty = 1;
-        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weighty = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+
         orderQtyPanel.add(orderQtyField, gbc);
+
+//        JPanel plusMinusOrdersPanel = new JPanel(null);
+//        gbc.gridx = 1;
+//        gbc.gridy = 0;
+//        gbc.weightx = 0;
+//        gbc.weighty = 0;
+//        gbc.anchor = GridBagConstraints.EAST;
+//        gbc.fill = GridBagConstraints.NONE;
+//        orderQtyPanel.add(plusMinusOrdersPanel);
+
+//        JButton orderUpButton = new JButton("+");
+//        orderUpButton.setSize(30, 20);
+//        plusMinusOrdersPanel.add(orderUpButton, BorderLayout.LINE_START);
+//
+//
+//        JButton orderDownButton = new JButton("-");
+//        orderDownButton.setSize(40, 10);
+//        orderDownButton.setBounds(new Rectangle(20,20));
+//        plusMinusOrdersPanel.add(orderDownButton, BorderLayout.LINE_END);
 
         //startprice panel
         JPanel startpricePanel = new JPanel(new GridBagLayout());
@@ -372,6 +391,14 @@ public class GUI extends JFrame {
         downRadio = new JRadioButton("down");
         randomizerRadio = new JRadioButton("randomizer");
 
+        weightSlider = new JSlider();
+        weightSlider.setMinimum(0);
+        weightSlider.setMaximum(10);
+        weightSlider.setMajorTickSpacing(1);
+        weightSlider.setMinorTickSpacing(1);
+        weightSlider.setValue(3);
+        weightSlider.setVisible(false);
+
 
         ButtonGroup distroButtonGroup = new ButtonGroup();
         distroButtonGroup.add(flatRadio);
@@ -389,19 +416,26 @@ public class GUI extends JFrame {
         gbc.weightx = 1;
         gbc.weighty = 1;
         gbc.anchor = GridBagConstraints.CENTER;
-        distributionPanl.add(upRadio, gbc);
+        distributionPanl.add(weightSlider, gbc);
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.weightx = 1;
         gbc.weighty = 1;
         gbc.anchor = GridBagConstraints.CENTER;
-        distributionPanl.add(downRadio, gbc);
+        distributionPanl.add(upRadio, gbc);
         gbc.gridx = 0;
         gbc.gridy = 3;
         gbc.weightx = 1;
         gbc.weighty = 1;
         gbc.anchor = GridBagConstraints.CENTER;
+        distributionPanl.add(downRadio, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
         distributionPanl.add(randomizerRadio, gbc);
+
 
 
         //preview/start button panel
@@ -459,23 +493,6 @@ public class GUI extends JFrame {
                         setTitle(e1.getMessage());
                     }
                 }
-            }
-        });
-        //cancelButton
-        cancelButton = new JButton("Cancel");
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.weightx = 1;
-        gbc.weighty = 1;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.fill = GridBagConstraints.NONE;
-        buttonsPanel.add(cancelButton, gbc);
-        cancelButton.setEnabled(false);
-        cancelButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                stop = true;
-
             }
         });
 
@@ -567,6 +584,11 @@ public class GUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 startButton.setEnabled(false);
+
+                if (flatRadio.isSelected()) {
+                    weightSlider.setVisible(false);
+                }
+
             }
         });
 
@@ -574,6 +596,9 @@ public class GUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 startButton.setEnabled(false);
+                if (upRadio.isSelected()) {
+                    weightSlider.setVisible(true);
+                }
             }
         });
 
@@ -581,7 +606,22 @@ public class GUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 startButton.setEnabled(false);
+                if (downRadio.isSelected()) {
+                    weightSlider.setVisible(true);
+                }
             }
+
+        });
+
+        randomizerRadio.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                startButton.setEnabled(false);
+                if (randomizerRadio.isSelected()) {
+                    weightSlider.setVisible(true);
+                }
+            }
+
         });
 
 
@@ -842,7 +882,8 @@ public class GUI extends JFrame {
                     }
 
                     if (add) {
-                        double ran = random.nextDouble() * randomStrength;
+                        double ran = random.nextDouble() * (weightSlider.getValue()*.1);
+                        System.out.println("slider- " + weightSlider.getValue() + "ran- " + ran);
                         double thisOne = singleOrderAmt * (ran + 1);
                         distributedTotal.add(i, thisOne);
                         diff = singleOrderAmt - thisOne;
@@ -872,7 +913,9 @@ public class GUI extends JFrame {
 
             // Min and max percentage of the amount allocated per price point
             double minPercentage = 0.05;
-            double maxPercentage = 0.4;
+            System.out.println("minPercent: " + minPercentage);
+            double maxPercentage = 0.05 * (1+(weightSlider.getValue()));
+            System.out.println("macxPercent: " + maxPercentage);
 
 
             for (int i = 0; i < numberOfOrders; i++) {

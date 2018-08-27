@@ -25,7 +25,7 @@ public class Main {
 
             if (gui != null) {
                 gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                gui.setSize(450, 620);
+                gui.setSize(450, 650);
                 gui.setLocationRelativeTo(null);
                 gui.setVisible(true);
             }
