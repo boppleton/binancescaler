@@ -829,6 +829,10 @@ public class GUI extends JFrame {
 
         Collections.sort(prices);
 
+        if (orderType.contains("Sell")) {
+            Collections.reverse(prices);
+        }
+
 
 
 
