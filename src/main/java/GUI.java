@@ -1,4 +1,5 @@
 import org.apache.commons.io.FileUtils;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
@@ -128,7 +129,38 @@ public class GUI extends JFrame {
                         e1.printStackTrace();
                     }
                 }
+
+                if (!e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1).contains("---")) {
+                    System.out.println("get bidask for " + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1));
+
+                    ArrayList<Double> bidask;
+
+                    try {
+                        bidask = BinanceAPI.getBidaskFromString(e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1));
+                    } catch (IOException e1) {
+                        System.out.println("exception getting bidask for " + e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1));
+                        bidask = null;
+                        e1.printStackTrace();
+                    }
+
+                    String bid = BigDecimal.valueOf(bidask.get(0)).setScale(8, RoundingMode.HALF_EVEN).toString();
+                    String ask = BigDecimal.valueOf(bidask.get(1)).setScale(8, RoundingMode.HALF_EVEN).toString();
+
+
+                    bid = bid.indexOf(".") < 0 ? bid : bid.replaceAll("0*$", "").replaceAll("\\.$", "");
+                    ask = ask.indexOf(".") < 0 ? ask : ask.replaceAll("0*$", "").replaceAll("\\.$", "");
+
+                    try {
+                        startpriceField.setText(ask);
+                        endpriceField.setText(bid);
+                    } catch (Exception ex) {
+                        System.out.println("exception setting bid/ask");
+                    }
+                }
+
+
             }
+
         });
         ComboPopup popup = (ComboPopup) pairPicker.getUI().getAccessibleChild(pairPicker, 0);
         ((JComponent) popup).setPreferredSize(new Dimension(150, 500));
@@ -175,10 +207,25 @@ public class GUI extends JFrame {
         ArrayList<CurrencyPair> ps = new ArrayList<>(pairset);
         Collections.sort(ps);
 
+
         String lastCounter = "";
         for (int i = 0; i < pairs.size(); i++) {
 
             String p = ps.get(i).toString();
+
+            if (p.replace("/","").contains("BCHSVBTC")) {
+                p = "BCHSV/BTC";
+            } else if (p.replace("/","").contains("BCHSVUSDT")) {
+                p = "BCHABC/USDT";
+            } else if (p.replace("/","").contains("BCHABCUSDT")) {
+                p = "BCHABC/BTC";
+            } else if (p.replace("/","").contains("BCHABCBTC")) {
+                p = "BCHSV/BTC";
+            } else if (p.replace("/","").contains("IOTXBTC")) {
+                p = "IOTX/BTC";
+            } else if (p.replace("/","").contains("IOTXETH")) {
+                p = "IOTX/ETH";
+            }
 
 
             if (p.endsWith("BTC") && btcpairsCheckbox.isSelected()) {
@@ -238,6 +285,11 @@ public class GUI extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         buysellradioPanel.add(sellRadio, gbc);
 
+
+
+
+
+
         //total amt panel
         JPanel totalAmtPanel = new JPanel(new GridBagLayout());
         gbc.gridx = 0;
@@ -248,7 +300,7 @@ public class GUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(totalAmtPanel, gbc);
         totalAmtPanel.setBorder(BorderFactory.createTitledBorder("total size"));
-        totalAmtField = new JTextField();
+        totalAmtField = new JTextField("1");
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1;
@@ -312,6 +364,7 @@ public class GUI extends JFrame {
         scaleMainPanel.add(orderQtyPanel, gbc);
         orderQtyPanel.setBorder(BorderFactory.createTitledBorder("# of orders"));
         orderQtyField = new JTextField(3);
+        orderQtyField.setText("50");
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1;
@@ -386,9 +439,9 @@ public class GUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         scaleMainPanel.add(distributionPanl, gbc);
         flatRadio = new JRadioButton("flat");
-        flatRadio.setSelected(true);
         upRadio = new JRadioButton("up");
         downRadio = new JRadioButton("down");
+        downRadio.setSelected(true);
         randomizerRadio = new JRadioButton("randomizer");
 
         weightSlider = new JSlider();
@@ -397,7 +450,7 @@ public class GUI extends JFrame {
         weightSlider.setMajorTickSpacing(1);
         weightSlider.setMinorTickSpacing(1);
         weightSlider.setValue(3);
-        weightSlider.setVisible(false);
+        weightSlider.setVisible(true);
 
 
         ButtonGroup distroButtonGroup = new ButtonGroup();
@@ -508,6 +561,23 @@ public class GUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.gridheight = 6;
         scaleMainPanel.add(previewScrollpane, gbc);
+
+        //buysell toggle bottom distribution
+        buyRadio.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                downRadio.setSelected(true);
+                weightSlider.setVisible(true);
+            }
+        });
+
+        sellRadio.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                upRadio.setSelected(true);
+                weightSlider.setVisible(true);
+            }
+        });
 
 
         //EVENTLISTENERS FOR STARTBUTTON
@@ -660,12 +730,18 @@ public class GUI extends JFrame {
 
     private void setBaseorcounter(ActionEvent e) {
 
-        String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1);
+        try {
 
-        String counter = pair.substring(0, pair.indexOf("/"));
-        String base = pair.substring(pair.indexOf("/") + 1, pair.length());
+            String pair = e.toString().substring(e.toString().indexOf("selectedItemReminder=") + 21, e.toString().length() - 1);
 
-        baseorcounterLabel.setText(counter);
+            String counter = pair.substring(0, pair.indexOf("/"));
+            String base = pair.substring(pair.indexOf("/") + 1, pair.length());
+
+            baseorcounterLabel.setText(counter);
+
+        } catch (Exception ex) {
+            System.out.println("exception in setBaseorcounter() passing");
+        }
     }
 
     //still need to fillPicker with favs at top

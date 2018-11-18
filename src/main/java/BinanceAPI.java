@@ -89,15 +89,28 @@ public class BinanceAPI {
 
         if (pair.contains("BTC/USDT")) {
             return CurrencyPair.BTC_USDT;
-        } else {
+        } else if (pair.contains("BCHSV/BTC")) {
+            return new CurrencyPair(new Currency("BCHSV"), Currency.BTC);
+        } else if (pair.contains("BCHSV/USDT")) {
+            return new CurrencyPair(new Currency("BCHSV"), Currency.USDT);
+        } else if (pair.contains("BCHABC/BTC")) {
+            return new CurrencyPair(new Currency("BCHABC"), Currency.BTC);
+        } else if (pair.contains("BCHABC/USDT")) {
+            return new CurrencyPair(new Currency("BCHABC"), Currency.USDT);
+        } else if (pair.contains("IOTX/BTC")) {
+            return new CurrencyPair(new Currency("IOTX"), Currency.BTC);
+        } else if (pair.contains("IOTX/ETH")) {
+            return new CurrencyPair(new Currency("IOTX"), Currency.ETH);
+        }
+        else {
 
-            if (pair.contains("BTC")) {
+            if (pair.contains("/BTC")) {
                 String c1 = pair.substring(0, pair.indexOf("/BTC"));
                 return new CurrencyPair(new Currency(c1), Currency.BTC);
-            } else if (pair.contains("ETH")) {
+            } else if (pair.contains("/ETH")) {
                 String c1 = pair.substring(0, pair.indexOf("/ETH"));
                 return new CurrencyPair(new Currency(c1), Currency.ETH);
-            } else if (pair.contains("BNB")) {
+            } else if (pair.contains("/BNB")) {
                 String c1 = pair.substring(0, pair.indexOf("/BNB"));
                 return new CurrencyPair(new Currency(c1), Currency.BNB);
             } else {
@@ -192,6 +205,20 @@ public class BinanceAPI {
     public static ArrayList<Double> getBidask(SingleTrade singleTrade) throws IOException {
 
         Ticker t = marketService.getTicker(getPair(singleTrade.pair));
+
+        ArrayList<Double> bidask = new ArrayList<>();
+
+        bidask.add(0, t.getBid().doubleValue());
+        bidask.add(1, t.getAsk().doubleValue());
+
+        return bidask;
+
+
+    }
+
+    public static ArrayList<Double> getBidaskFromString(String pair) throws IOException {
+
+        Ticker t = marketService.getTicker(getPair(pair));
 
         ArrayList<Double> bidask = new ArrayList<>();
 
