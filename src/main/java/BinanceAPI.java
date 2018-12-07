@@ -113,9 +113,12 @@ public class BinanceAPI {
             } else if (pair.contains("/BNB")) {
                 String c1 = pair.substring(0, pair.indexOf("/BNB"));
                 return new CurrencyPair(new Currency(c1), Currency.BNB);
-            } else {
+            } else if (pair.contains("/USDT")){
                 String c1 = pair.substring(0, pair.indexOf("/USDT"));
                 return new CurrencyPair(new Currency(c1), Currency.USDT);
+            } else {
+                String c1 = pair.substring(0, pair.indexOf("/PAX"));
+                return new CurrencyPair(new Currency(c1), new Currency("PAX"));
             }
 
         }

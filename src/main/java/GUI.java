@@ -252,6 +252,12 @@ public class GUI extends JFrame {
                 }
                 pairPicker.addItem(p);
                 lastCounter = p.substring(0, p.indexOf("BNB"));
+            } else if (p.endsWith("PAX") && paxpairsCheckbox.isSelected()) {
+                if (!lastCounter.contains(p.substring(0, p.indexOf("PAX")))) {
+                    pairPicker.addItem("---");
+                }
+                pairPicker.addItem(p);
+                lastCounter = p.substring(0, p.indexOf("PAX"));
             }
 
         }
@@ -1141,6 +1147,7 @@ public class GUI extends JFrame {
     private static JCheckBox usdtpairsCheckbox;
     private static JCheckBox ethpairsCheckbox;
     private static JCheckBox bnbpairsCheckbox;
+    private static JCheckBox paxpairsCheckbox;
 
 
     private void basePairChecksPanel() {
@@ -1149,6 +1156,7 @@ public class GUI extends JFrame {
         usdtpairsCheckbox = new JCheckBox("USDT", true);
         ethpairsCheckbox = new JCheckBox("ETH", true);
         bnbpairsCheckbox = new JCheckBox("BNB", true);
+        paxpairsCheckbox = new JCheckBox("PAX", true);
 
         pairsCheckboxPanel = new JPanel(new GridBagLayout());
         pairsCheckboxPanel.setBorder(BorderFactory.createTitledBorder("Base Pairs"));
@@ -1187,6 +1195,12 @@ public class GUI extends JFrame {
         gbc.weightx = 1;
         gbc.weighty = 0;
         pairsCheckboxPanel.add(bnbpairsCheckbox, gbc);
+        gbc.gridx = 4;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+        pairsCheckboxPanel.add(paxpairsCheckbox, gbc);
 
         JLabel baseInstructionsLabel = new JLabel("right click to add a pair to favorites");
         gbc.gridx = 0;
